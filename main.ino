@@ -1,22 +1,22 @@
-#include "Coordinates.h"
+#include "Coordinates.h" //GPS Coordinates
 
-#include <Wire.h>
-#include "./Adafruit_PWMServoDriver.h"
-#include <SoftwareSerial.h> 
-#include <TinyGPS++.h> 
-#include <QMC5883LCompass.h>
+#include <Wire.h> //I2C library
+#include "./Adafruit_PWMServoDriver.h" //PWM motor driver
+#include <SoftwareSerial.h> //Software Serial for GPS
+#include <TinyGPS++.h> //TinyGPS library
+#include <QMC5883LCompass.h> //QMC5883L magnetic compass library.
 
 //motor speeds
-int Speed = 500;
-int tSpeed = 1000;
+int Speed = 500; //Straight speed
+int tSpeed = 1000; //Turn Speed
 
-//GPS
+//GPS neo6M
 TinyGPSPlus gps;
-SoftwareSerial gpsSerial(4,3);
+SoftwareSerial gpsSerial(4,3); //GPS RX is connected to D4 and TX is connected to D3
 
-//Obstacle avoidance 
-int trigPin =8;
-int echoPin =9;
+//Obstacle avoidance using ultrasonic sensor
+int trigPin =8; //Trigger pin of ultrasonic sensor
+int echoPin =9; //Echo pin of ultrasonic sensor
 long duration, obstacle;
 
 //Motor Driver
@@ -40,16 +40,18 @@ int coarseToDestination;
 double distanceToDestination;
 double prevDistanceToDestination;
 
-void findObstacle(){
+//Obstacle avoidance function
+void findObstacle(){ 
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);   
   digitalWrite(trigPin, HIGH);     // send waves for 10 us
   delayMicroseconds(10);
   duration = pulseIn(echoPin, HIGH); // receive reflected waves
-  obstacle = duration / 58.2;   // convert to obstacle
+  obstacle = duration / 58.2;   // convert to distance
   delay(100);
 }
 
+//Function that finds the Azimuth
 void getAzimuth(){
   int sum;
   sum = 0;
@@ -62,6 +64,7 @@ void getAzimuth(){
 }
 
 
+//Go straight 
 void goForward()
 {
 
@@ -82,6 +85,7 @@ void goForward()
     delay(1000);
 }
 
+//go back
 void goBackward()
 {
     pwm.setPWM(8, 0, 0);
@@ -101,6 +105,7 @@ void goBackward()
     delay(500);
 }
 
+//brake function
 void brake()
 {
     pwm.setPWM(8, 0, 0);
@@ -119,6 +124,7 @@ void brake()
     pwm.setPWM(14, 0, 0);
 }
 
+//left turn. Left wheels rools while right wheels don't move
 void turnLeft()
 {
     pwm.setPWM(8, 0, tSpeed);
@@ -139,6 +145,7 @@ void turnLeft()
 
 }
 
+//right turn. Right wheels rools while left wheels don't move
 void turnRight()
 {
     pwm.setPWM(8, 0, 0);
@@ -160,7 +167,7 @@ void turnRight()
 
 }
 
-
+//Left wheels rools font while right wheels rolls back
 void spinLeft()
 {
     pwm.setPWM(8, 0, tSpeed);
@@ -181,7 +188,7 @@ void spinLeft()
     delay(100);
 }
 
-
+//Right wheels rools font while left wheels rolls back
 void spinRight()
 {
     pwm.setPWM(8, 0, 0);
@@ -202,6 +209,7 @@ void spinRight()
     delay(100);
 }
 
+//Setup
 void setup()
 {
    Serial.begin(19200);
@@ -223,19 +231,19 @@ void loop()
 
 void Goola(){
   Serial.println("Entered Goola");
-  getAzimuth();
-  findObstacle();
+  getAzimuth(); //Find azimuth
+  findObstacle(); //Find obstracle distance
   Serial.print("Azimuth : ");
   Serial.println(azimuth);
   Serial.print("Number of GPS satellites: ");
-  Serial.println(gps.satellites.value());
+  Serial.println(gps.satellites.value()); 
   Serial.print(gps.location.lat());
   Serial.print(" , ");
   Serial.println(gps.location.lng());
   Serial.print("Obstacle Distance: ");
   Serial.println(obstacle);
 
-  while (gpsSerial.available() > 0){
+  while (gpsSerial.available() > 0){ //While MCU is receiving data from GPS module
     
     if (gps.encode(gpsSerial.read()))
     {
@@ -246,10 +254,11 @@ void Goola(){
   getAzimuth();
   Serial.print("Azimuth : ");
   Serial.println(azimuth);
-  Serial.print("Course to : ");
-  Serial.println(TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), 33.676772, -117.913715));
-  Serial.print("Distance to : ");
-  Serial.println(TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(),33.676772, -117.913715));
+        //For GPS debugging. IF GPS works, following lines will return course and distance. You can change coordinates to your desired point
+  //Serial.print("Course to : ");
+  //Serial.println(TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), 33.676772, -117.913715));
+  //Serial.print("Distance to : ");
+  //Serial.println(TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(),33.676772, -117.913715));
   Serial.print(gps.location.lat());
   Serial.print(" , ");
   Serial.println(gps.location.lng());
