@@ -1,23 +1,27 @@
-#include "Coordinates.h" //GPS Coordinates
+//#include "AdamsLotCoordinates.h"//Adams Lot Coordinates
+//#include "LotECoordinates.h"
+#include "HomeFront.h"
 
-#include <Wire.h> //I2C library
-#include "./Adafruit_PWMServoDriver.h" //PWM motor driver
-#include <SoftwareSerial.h> //Software Serial for GPS
-#include <TinyGPS++.h> //TinyGPS library
-#include <QMC5883LCompass.h> //QMC5883L magnetic compass library.
+#include <Wire.h>
+#include "./Adafruit_PWMServoDriver.h"
+#include <SoftwareSerial.h> 
+#include <TinyGPS++.h> 
+#include <QMC5883LCompass.h>
+
 
 //motor speeds
-int Speed = 500; //Straight speed
-int tSpeed = 1000; //Turn Speed
+int Speed = 500;
+int tSpeed = 1000;
 
-//GPS neo6M
+//GPS
 TinyGPSPlus gps;
-SoftwareSerial gpsSerial(4,3); //GPS RX is connected to D4 and TX is connected to D3
+SoftwareSerial gpsSerial(4,3);
 
-//Obstacle avoidance using ultrasonic sensor
-int trigPin =8; //Trigger pin of ultrasonic sensor
-int echoPin =9; //Echo pin of ultrasonic sensor
-long duration, obstacle;
+//Obstacle avoidance 
+int trigPin =8;
+int echoPin =9;
+long duration;
+long obstacle;
 
 //Motor Driver
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x41);
@@ -40,18 +44,19 @@ int coarseToDestination;
 double distanceToDestination;
 double prevDistanceToDestination;
 
-//Obstacle avoidance function
-void findObstacle(){ 
+void findObstacle(){
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);   
   digitalWrite(trigPin, HIGH);     // send waves for 10 us
   delayMicroseconds(10);
   duration = pulseIn(echoPin, HIGH); // receive reflected waves
-  obstacle = duration / 58.2;   // convert to distance
+  obstacle = duration / 58.2;   // convert to obstacle
+  if(obstacle == 16 || obstacle == 0){
+    obstacle+=51;
+  }
   delay(100);
 }
 
-//Function that finds the Azimuth
 void getAzimuth(){
   int sum;
   sum = 0;
@@ -64,7 +69,6 @@ void getAzimuth(){
 }
 
 
-//Go straight 
 void goForward()
 {
 
@@ -85,7 +89,6 @@ void goForward()
     delay(1000);
 }
 
-//go back
 void goBackward()
 {
     pwm.setPWM(8, 0, 0);
@@ -105,7 +108,6 @@ void goBackward()
     delay(500);
 }
 
-//brake function
 void brake()
 {
     pwm.setPWM(8, 0, 0);
@@ -124,7 +126,6 @@ void brake()
     pwm.setPWM(14, 0, 0);
 }
 
-//left turn. Left wheels rools while right wheels don't move
 void turnLeft()
 {
     pwm.setPWM(8, 0, tSpeed);
@@ -145,7 +146,6 @@ void turnLeft()
 
 }
 
-//right turn. Right wheels rools while left wheels don't move
 void turnRight()
 {
     pwm.setPWM(8, 0, 0);
@@ -167,7 +167,7 @@ void turnRight()
 
 }
 
-//Left wheels rools font while right wheels rolls back
+
 void spinLeft()
 {
     pwm.setPWM(8, 0, tSpeed);
@@ -188,7 +188,7 @@ void spinLeft()
     delay(100);
 }
 
-//Right wheels rools font while left wheels rolls back
+
 void spinRight()
 {
     pwm.setPWM(8, 0, 0);
@@ -209,7 +209,13 @@ void spinRight()
     delay(100);
 }
 
-//Setup
+static void smartDelay(unsigned long ms){
+  unsigned long start = millis();
+  do{
+    while(gpsSerial.available())
+      gps.encode(gpsSerial.read());
+  }while(millis()-start<ms);
+}
 void setup()
 {
    Serial.begin(19200);
@@ -220,7 +226,7 @@ void setup()
    qmc.init();
    getAzimuth();
    pinMode(trigPin, OUTPUT);       
-   pinMode(echoPin, INPUT);            
+   pinMode(echoPin, INPUT);           
 }
 
 
@@ -231,56 +237,57 @@ void loop()
 
 void Goola(){
   Serial.println("Entered Goola");
-  getAzimuth(); //Find azimuth
-  findObstacle(); //Find obstracle distance
+  getAzimuth();
+  findObstacle();
   Serial.print("Azimuth : ");
   Serial.println(azimuth);
   Serial.print("Number of GPS satellites: ");
-  Serial.println(gps.satellites.value()); 
+  Serial.println(gps.satellites.value());
   Serial.print(gps.location.lat());
   Serial.print(" , ");
   Serial.println(gps.location.lng());
   Serial.print("Obstacle Distance: ");
   Serial.println(obstacle);
-
-  while (gpsSerial.available() > 0){ //While MCU is receiving data from GPS module
+  smartDelay(1000);
+  //while (gpsSerial.available() > 0){
+    while(gps.location.isValid()){
     
-    if (gps.encode(gpsSerial.read()))
-    {
-      Serial.println("Reading GPS Data");
-      if (gps.location.isValid())
-      {
+  //  if (gps.encode(gpsSerial.read()))
+  //  {
+  //    Serial.println("Reading GPS Data");
+  //    if (gps.location.isValid())
+  //    {
   Serial.println("GPS OK");
   getAzimuth();
   Serial.print("Azimuth : ");
   Serial.println(azimuth);
-        //For GPS debugging. IF GPS works, following lines will return course and distance. You can change coordinates to your desired point
-  //Serial.print("Course to : ");
-  //Serial.println(TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), 33.676772, -117.913715));
-  //Serial.print("Distance to : ");
-  //Serial.println(TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(),33.676772, -117.913715));
+  Serial.print("Course to : ");
+  Serial.println(TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), 33.676772, -117.913715));
+  Serial.print("Distance to : ");
+  Serial.println(TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(),33.676772, -117.913715));
   Serial.print(gps.location.lat());
   Serial.print(" , ");
   Serial.println(gps.location.lng());
 
   for (int i=0; i<wayPointsSize; i++){
-    do{
-      while (gpsSerial.available() > 0){
-        if (gps.encode(gpsSerial.read()))
-    {
-      if (gps.location.isValid())
-      {
+    do{ 
+      //while (gpsSerial.available() > 0){
+        //if (gps.encode(gpsSerial.read()))
+    //{
+    //  if (gps.location.isValid())
+    // {
 
-
+ 
   //do{
     distanceToDestination=TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(),wayPoints[i][0], wayPoints[i][1]);
   //}while(distanceToDestination!=prevDistanceToDestination);
-  //do{
+  
+  do{
+    findObstacle();
   coarseToDestination=TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), wayPoints[i][0], wayPoints[i][1]);
   couarseChange=coarseToDestination-azimuth;
   if(couarseChange<0)
     couarseChange+=360;
-    findObstacle();
   if(obstacle>50){
     if(couarseChange>10 && couarseChange<180){
       spinRight();
@@ -295,34 +302,39 @@ void Goola(){
       Serial.println(i);
     }
 
-  else{
-    goForward();
-    brake();
-    Serial.println("Go Forward");
-    Serial.println(i);
+    else{
+      goForward();
+      brake();
+      Serial.println("Go Forward");
+      Serial.println(i);
+    }
   }
-  }
   else{
+//    findObstacle();
     Serial.println("Obstacle avoidance");
+    Serial.print("Obstacle :");
+    Serial.println(obstacle);
     do{
     spinLeft();
     findObstacle();
     }while(obstacle<50);
-    if(obstacle>50){
-      goForward();
-      brake();
-    }
+    delay(250);
+    brake();
+    delay(250);
   }
+  Serial.println("Exited the loop");
 getAzimuth();
 
-//}while(abs(couarseChange<5));
-
+}while(abs(couarseChange<10));
+  Serial.println("Exited the loop 2");
 //goForward();
 //Serial.println("Going Forward");
-if(distanceToDestination<2.5)
+if(distanceToDestination<2.5){
   i++;
-  if (i>wayPointsSize-1)
+}
+  if (i>wayPointsSize-1){
     i=0;
+  }
 Serial.print("Azimuth : ");
 Serial.println(azimuth);
 Serial.print("Distance to Destination : ");
@@ -333,14 +345,15 @@ Serial.print("Coarse change: ");
 Serial.println(couarseChange);
 Serial.println(gps.location.lat());
 Serial.println(gps.location.lng());
-delay(500);
-      }
-      }
-      }
+//delay(500);
+ //     }
+//      }
+  smartDelay(1000);    
 }while(distanceToDestination>2.5);
+  Serial.println("Exited the loop 3");
 }    
-}
-}
+//}
+//}
 }
 prevDistanceToDestination=distanceToDestination;
 delay(500);
