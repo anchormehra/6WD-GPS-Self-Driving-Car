@@ -1,5 +1,6 @@
 //#include "AdamsLotCoordinates.h"//Adams Lot Coordinates
 //#include "LotECoordinates.h"
+//#include "LotECoordinatesFinal.h"
 #include "HomeFront.h"
 
 #include <Wire.h>
@@ -10,8 +11,8 @@
 
 
 //motor speeds
-int Speed = 500;
-int tSpeed = 1000;
+int Speed = 650;
+int tSpeed = 1250;
 
 //GPS
 TinyGPSPlus gps;
@@ -86,7 +87,7 @@ void goForward()
     pwm.setPWM(13, 0, 0);
     pwm.setPWM(15, 0, Speed);
     pwm.setPWM(14, 0, 0);
-    delay(1000);
+    smartDelay(1000);
 }
 
 void goBackward()
@@ -105,7 +106,7 @@ void goBackward()
     pwm.setPWM(13, 0, Speed);
     pwm.setPWM(15, 0, 0);
     pwm.setPWM(14, 0, Speed);
-    delay(500);
+    smartDelay(500);
 }
 
 void brake()
@@ -282,7 +283,7 @@ void Goola(){
     distanceToDestination=TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(),wayPoints[i][0], wayPoints[i][1]);
   //}while(distanceToDestination!=prevDistanceToDestination);
   
-  do{
+ // if(abs(couarseChange<10)){
     findObstacle();
   coarseToDestination=TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), wayPoints[i][0], wayPoints[i][1]);
   couarseChange=coarseToDestination-azimuth;
@@ -318,14 +319,14 @@ void Goola(){
     spinLeft();
     findObstacle();
     }while(obstacle<50);
-    delay(250);
+    delay(50);
     brake();
     delay(250);
   }
   Serial.println("Exited the loop");
 getAzimuth();
 
-}while(abs(couarseChange<10));
+//}//while(abs(couarseChange<10));
   Serial.println("Exited the loop 2");
 //goForward();
 //Serial.println("Going Forward");
