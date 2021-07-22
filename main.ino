@@ -87,7 +87,7 @@ void goForward()
     pwm.setPWM(13, 0, 0);
     pwm.setPWM(15, 0, Speed);
     pwm.setPWM(14, 0, 0);
-    smartDelay(1000);
+    smartDelay(750);
 }
 
 void goBackward()
@@ -270,7 +270,7 @@ void Goola(){
   Serial.print(" , ");
   Serial.println(gps.location.lng());
 
-  for (int i=0; i<wayPointsSize; i++){
+  for (int i=0; i<wayPointsSize; ){
     do{ 
       //while (gpsSerial.available() > 0){
         //if (gps.encode(gpsSerial.read()))
@@ -320,6 +320,8 @@ void Goola(){
     findObstacle();
     }while(obstacle<50);
     delay(50);
+    brake();
+    goForward();
     brake();
     delay(250);
   }
